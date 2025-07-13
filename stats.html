@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>청첩장 통계</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <style>
+    body { font-family: sans-serif; background: #f9f9f9; }
+    .container { max-width: 500px; margin: 40px auto; background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 2px 8px #0001; }
+    .stat { margin-bottom: 16px; font-size: 18px; }
+    .label { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>청첩장 통계</h2>
+    <div class="stat"><span class="label">조회수:</span> <span id="views">-</span></div>
+    <div class="stat"><span class="label">방문자수:</span> <span id="visitors">-</span></div>
+    <div class="stat"><span class="label">마지막 접속 시간:</span> <span id="lastVisit">-</span></div>
+    <div class="stat"><span class="label">방명록 수:</span> <span id="guestbookCount">-</span></div>
+  </div>
+  <script>
+    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_PUBLIC_ANON_KEY';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const params = new URLSearchParams(window.location.search);
+    const invite_id = params.get('id');
+
+    async function loadStats() {
+      // 조회수, 방문자수, 마지막 접속 시간 (예시: invites 테이블에 저장되어 있다고 가정)
+      const { data: invite, error: err1 } = await supabase.from('invites').select('views, visitors, last_visit').eq('id', invite_id).single();
+      if (invite) {
+        document.getElementById('views').textContent = invite.views || 0;
+        document.getElementById('visitors').textContent = invite.visitors || 0;
+        document.getElementById('lastVisit').textContent = invite.last_visit ? invite.last_visit.replace('T', ' ').slice(0, 19) : '-';
+      }
+      // 방명록 수
+      const { count, error: err2 } = await supabase.from('guestbook').select('*', { count: 'exact', head: true }).eq('invite_id', invite_id);
+      document.getElementById('guestbookCount').textContent = count || 0;
+    }
+    loadStats();
+  </script>
+</body>
+</html> 

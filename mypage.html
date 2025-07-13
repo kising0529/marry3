@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>마이페이지</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <style>
+    body { font-family: sans-serif; background: #f9f9f9; }
+    .container { max-width: 600px; margin: 40px auto; background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 2px 8px #0001; }
+    h2 { margin-bottom: 24px; }
+    .info, .invite { margin-bottom: 16px; }
+    .invite-list { margin-top: 24px; }
+    .invite-item { border-bottom: 1px solid #eee; padding: 12px 0; }
+    .btn { padding: 4px 10px; border: none; border-radius: 4px; background: #4a90e2; color: #fff; cursor: pointer; margin-right: 4px; }
+    .danger { background: #e74c3c; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>마이페이지</h2>
+    <div class="info" id="userInfo"></div>
+    <button class="btn" onclick="logout()">로그아웃</button>
+    <div class="invite-list">
+      <h3>내 청첩장 목록</h3>
+      <div id="invites"></div>
+    </div>
+  </div>
+  <script>
+    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_PUBLIC_ANON_KEY';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function loadUserInfo() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        document.getElementById('userInfo').textContent = '로그인이 필요합니다.';
+        return;
+      }
+      document.getElementById('userInfo').innerHTML = `<b>이메일:</b> ${user.email}`;
+      loadInvites(user.id);
+    }
+
+    async function loadInvites(user_id) {
+      const { data, error } = await supabase.from('invites').select('*').eq('user_id', user_id);
+      const invitesDiv = document.getElementById('invites');
+      if (error) {
+        invitesDiv.textContent = '청첩장 목록을 불러올 수 없습니다.';
+        return;
+      }
+      if (!data.length) {
+        invitesDiv.textContent = '등록된 청첩장이 없습니다.';
+        return;
+      }
+      invitesDiv.innerHTML = data.map(i => `
+        <div class="invite-item">
+          <b>${i.groom} & ${i.bride}</b> - ${i.date} ${i.time} @ ${i.venue}<br>
+          <button class='btn' onclick='editInvite(${i.id})'>수정</button>
+          <button class='btn danger' onclick='deleteInvite(${i.id})'>삭제</button>
+        </div>
+      `).join('');
+    }
+
+    function logout() {
+      supabase.auth.signOut().then(() => {
+        alert('로그아웃 되었습니다.');
+        location.href = 'login.html';
+      });
+    }
+
+    function editInvite(id) {
+      location.href = `invite_form.html?id=${id}`;
+    }
+    async function deleteInvite(id) {
+      if (!confirm('정말 삭제할까요?')) return;
+      await supabase.from('invites').delete().eq('id', id);
+      loadUserInfo();
+    }
+
+    loadUserInfo();
+  </script>
+</body>
+</html> 

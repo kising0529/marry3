@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>로그인</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <style>
+    body { font-family: sans-serif; background: #f9f9f9; }
+    .container { max-width: 400px; margin: 60px auto; background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 2px 8px #0001; }
+    h2 { margin-bottom: 24px; }
+    input { width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid #ddd; border-radius: 4px; }
+    button { width: 100%; padding: 12px; background: #4a90e2; color: #fff; border: none; border-radius: 4px; font-size: 16px; }
+    .message { margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>로그인</h2>
+    <input type="email" id="email" placeholder="이메일" required />
+    <input type="password" id="password" placeholder="비밀번호" required />
+    <button onclick="signIn()">로그인</button>
+    <div class="message" id="message"></div>
+  </div>
+  <script type="module">
+    import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js';
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.signIn = async function signIn() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const messageDiv = document.getElementById('message');
+      messageDiv.textContent = '';
+      if (!email || !password) {
+        messageDiv.textContent = '이메일과 비밀번호를 입력하세요.';
+        return;
+      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        messageDiv.textContent = '로그인 실패: ' + error.message;
+      } else {
+        messageDiv.textContent = '로그인 성공!';
+      }
+    }
+  </script>
+</body>
+</html> 

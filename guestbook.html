@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>방명록</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <style>
+    body { font-family: sans-serif; background: #f9f9f9; }
+    .container { max-width: 500px; margin: 40px auto; background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 2px 8px #0001; }
+    .entry { border-bottom: 1px solid #eee; padding: 12px 0; }
+    .entry .name { font-weight: bold; }
+    .entry .msg { margin: 4px 0 0 0; }
+    .admin-btn { margin-left: 8px; color: #fff; background: #e74c3c; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+    .hidden { color: #aaa; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>방명록</h2>
+    <input type="text" id="guestName" placeholder="이름" required />
+    <input type="text" id="guestMsg" placeholder="메시지" required />
+    <button onclick="addEntry()">남기기</button>
+    <div id="msg"></div>
+    <hr>
+    <div id="guestbook"></div>
+  </div>
+  <script>
+    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_PUBLIC_ANON_KEY';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const params = new URLSearchParams(window.location.search);
+    const invite_id = params.get('id');
+    const isAdmin = false; // 실제 서비스에서는 로그인/권한 체크 필요
+
+    async function loadGuestbook() {
+      const { data, error } = await supabase.from('guestbook').select('*').eq('invite_id', invite_id).order('created_at', { ascending: false });
+      const gb = document.getElementById('guestbook');
+      if (error) {
+        gb.textContent = '방명록을 불러올 수 없습니다.';
+        return;
+      }
+      gb.innerHTML = data.map(e => `
+        <div class="entry${e.hidden ? ' hidden' : ''}">
+          <span class="name">${e.name}</span>:
+          <span class="msg">${e.hidden ? '(숨김 처리됨)' : e.message}</span>
+          ${isAdmin ? `<button class="admin-btn" onclick="hideEntry('${e.id}')">숨김</button><button class="admin-btn" onclick="deleteEntry('${e.id}')">삭제</button>` : ''}
+        </div>
+      `).join('');
+    }
+
+    async function addEntry() {
+      const name = document.getElementById('guestName').value.trim();
+      const message = document.getElementById('guestMsg').value.trim();
+      const msgDiv = document.getElementById('msg');
+      msgDiv.textContent = '';
+      if (!name || !message) {
+        msgDiv.textContent = '이름과 메시지를 입력하세요.';
+        return;
+      }
+      const { error } = await supabase.from('guestbook').insert([{ invite_id, name, message }]);
+      if (error) {
+        msgDiv.textContent = '등록 실패: ' + error.message;
+      } else {
+        msgDiv.textContent = '등록되었습니다!';
+        document.getElementById('guestName').value = '';
+        document.getElementById('guestMsg').value = '';
+        loadGuestbook();
+      }
+    }
+
+    async function hideEntry(id) {
+      await supabase.from('guestbook').update({ hidden: true }).eq('id', id);
+      loadGuestbook();
+    }
+    async function deleteEntry(id) {
+      await supabase.from('guestbook').delete().eq('id', id);
+      loadGuestbook();
+    }
+
+    loadGuestbook();
+  </script>
+</body>
+</html> 

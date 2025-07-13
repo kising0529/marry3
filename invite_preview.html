@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>청첩장 미리보기</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <style>
+    body { font-family: sans-serif; background: #f9f9f9; }
+    .container { max-width: 500px; margin: 40px auto; background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 2px 8px #0001; }
+    .photo { width: 100%; border-radius: 8px; margin-bottom: 16px; }
+    .info { margin-bottom: 12px; }
+    .label { font-weight: bold; }
+    audio { width: 100%; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container" id="preview"></div>
+  <div class="container" id="shareBox" style="margin-top:24px; text-align:center;">
+    <button onclick="copyLink()">링크 복사</button>
+    <button onclick="showQR()">QR코드 보기</button>
+    <button onclick="shareKakao()">카카오톡 공유</button>
+    <div id="qrWrap" style="margin-top:16px; display:none;"></div>
+    <div id="copyMsg" style="color:green; margin-top:8px;"></div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+  <script>
+    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_PUBLIC_ANON_KEY';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function loadInvite() {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      if (!id) {
+        document.getElementById('preview').textContent = '청첩장 ID가 없습니다.';
+        return;
+      }
+      const { data, error } = await supabase.from('invites').select('*').eq('id', id).single();
+      if (error || !data) {
+        document.getElementById('preview').textContent = '청첩장 정보를 불러올 수 없습니다.';
+        return;
+      }
+      const html = `
+        ${data.photo_url ? `<img src="${data.photo_url}" class="photo" alt="대표 사진" />` : ''}
+        <div class="info"><span class="label">신랑:</span> ${data.groom}</div>
+        <div class="info"><span class="label">신부:</span> ${data.bride}</div>
+        <div class="info"><span class="label">일시:</span> ${data.date} ${data.time}</div>
+        <div class="info"><span class="label">장소:</span> ${data.venue} (${data.address})</div>
+        <div class="info"><span class="label">연락처:</span> ${data.phone}</div>
+        <div class="info"><span class="label">계좌번호:</span> ${data.account || '-'}</div>
+        <div class="info"><span class="label">초대 문구:</span><br>${data.message}</div>
+        ${data.music ? `<audio controls src="${data.music}"></audio>` : ''}
+      `;
+      document.getElementById('preview').innerHTML = html;
+    }
+    loadInvite();
+
+    function getInviteUrl() {
+      const url = window.location.origin + window.location.pathname + window.location.search;
+      return url;
+    }
+    function copyLink() {
+      const url = getInviteUrl();
+      navigator.clipboard.writeText(url).then(() => {
+        document.getElementById('copyMsg').textContent = '링크가 복사되었습니다!';
+      });
+    }
+    function showQR() {
+      const url = getInviteUrl();
+      const qrDiv = document.getElementById('qrWrap');
+      qrDiv.style.display = 'block';
+      qrDiv.innerHTML = '';
+      const qr = new QRious({ value: url, size: 180 });
+      const img = document.createElement('img');
+      img.src = qr.toDataURL();
+      img.alt = 'QR코드';
+      qrDiv.appendChild(img);
+      const dlBtn = document.createElement('button');
+      dlBtn.textContent = 'QR코드 다운로드';
+      dlBtn.onclick = () => {
+        const a = document.createElement('a');
+        a.href = img.src;
+        a.download = 'invite-qr.png';
+        a.click();
+      };
+      qrDiv.appendChild(document.createElement('br'));
+      qrDiv.appendChild(dlBtn);
+    }
+    function shareKakao() {
+      alert('카카오톡 공유는 실제 서비스에서는 카카오 SDK 연동 필요. 현재는 링크 복사 후 카톡에 붙여넣기 해주세요.');
+    }
+  </script>
+</body>
+</html> 

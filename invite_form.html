@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>청첩장 정보 입력</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <style>
+    .container { max-width: 500px; margin: 40px auto; background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 2px 8px #0001; }
+    input, textarea { width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid #ddd; border-radius: 4px; }
+    button { width: 100%; padding: 12px; background: #4a90e2; color: #fff; border: none; border-radius: 4px; font-size: 16px; }
+    .message { margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>청첩장 정보 입력</h2>
+    <input type="text" id="groom" placeholder="신랑 이름" required />
+    <input type="text" id="bride" placeholder="신부 이름" required />
+    <input type="date" id="date" required />
+    <input type="time" id="time" required />
+    <input type="text" id="venue" placeholder="장소명" required />
+    <input type="text" id="address" placeholder="주소" required />
+    <textarea id="message" placeholder="초대 문구" required></textarea>
+    <input type="text" id="phone" placeholder="연락처" required />
+    <input type="text" id="account" placeholder="계좌번호" />
+    <input type="file" id="photo" accept="image/*" />
+    <input type="text" id="music" placeholder="배경음악 URL" />
+    <button onclick="saveInvite()">청첩장 저장</button>
+    <div class="message" id="msg"></div>
+  </div>
+  <script>
+    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_PUBLIC_ANON_KEY';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function saveInvite() {
+      const groom = document.getElementById('groom').value.trim();
+      const bride = document.getElementById('bride').value.trim();
+      const date = document.getElementById('date').value;
+      const time = document.getElementById('time').value;
+      const venue = document.getElementById('venue').value.trim();
+      const address = document.getElementById('address').value.trim();
+      const message = document.getElementById('message').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const account = document.getElementById('account').value.trim();
+      const music = document.getElementById('music').value.trim();
+      const photoFile = document.getElementById('photo').files[0];
+      const template_id = localStorage.getItem('selectedTemplateId');
+      const msgDiv = document.getElementById('msg');
+      msgDiv.textContent = '';
+
+      if (!groom || !bride || !date || !time || !venue || !address || !message || !phone || !template_id) {
+        msgDiv.textContent = '모든 필수 정보를 입력하세요.';
+        return;
+      }
+
+      let photo_url = '';
+      if (photoFile) {
+        const { data, error } = await supabase.storage.from('invites').upload(`photos/${Date.now()}_${photoFile.name}`, photoFile);
+        if (error) {
+          msgDiv.textContent = '사진 업로드 실패: ' + error.message;
+          return;
+        }
+        photo_url = supabase.storage.from('invites').getPublicUrl(data.path).publicUrl;
+      }
+
+      const { data, error } = await supabase.from('invites').insert([{
+        template_id, groom, bride, date, time, venue, address, message, phone, account, music, photo_url
+      }]);
+
+      if (error) {
+        msgDiv.textContent = '청첩장 저장 실패: ' + error.message;
+      } else {
+        msgDiv.textContent = '청첩장이 저장되었습니다!';
+        // location.href = 'invite_preview.html?id=' + data[0].id;
+      }
+    }
+  </script>
+</body>
+</html> 

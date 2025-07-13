@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>관리자 페이지</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <style>
+    body { font-family: sans-serif; background: #f9f9f9; }
+    .container { max-width: 900px; margin: 40px auto; background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 2px 8px #0001; }
+    h2 { margin-top: 32px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #f0f0f0; }
+    .btn { padding: 4px 10px; border: none; border-radius: 4px; background: #4a90e2; color: #fff; cursor: pointer; margin-right: 4px; }
+    .danger { background: #e74c3c; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>관리자 페이지</h1>
+    <h2>회원 정보 관리</h2>
+    <table id="usersTable"><thead><tr><th>이메일</th><th>이름</th></tr></thead><tbody></tbody></table>
+    <h2>청첩장 전체 목록</h2>
+    <table id="invitesTable"><thead><tr><th>ID</th><th>신랑</th><th>신부</th><th>일시</th><th>장소</th></tr></thead><tbody></tbody></table>
+    <h2>템플릿 관리</h2>
+    <button class="btn" onclick="addTemplate()">템플릿 추가</button>
+    <table id="templatesTable"><thead><tr><th>이름</th><th>설명</th><th>수정</th><th>삭제</th></tr></thead><tbody></tbody></table>
+    <h2>결제 내역 및 통계</h2>
+    <table id="paymentsTable"><thead><tr><th>유저</th><th>항목</th><th>일시</th></tr></thead><tbody></tbody></table>
+    <h2>방명록 내용 필터링</h2>
+    <table id="guestbookTable"><thead><tr><th>이름</th><th>메시지</th><th>숨김</th><th>삭제</th></tr></thead><tbody></tbody></table>
+  </div>
+  <script>
+    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_PUBLIC_ANON_KEY';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function loadUsers() {
+      const { data, error } = await supabase.from('users').select('email, name');
+      const tbody = document.querySelector('#usersTable tbody');
+      if (error) { tbody.innerHTML = '<tr><td colspan="2">불러오기 실패</td></tr>'; return; }
+      tbody.innerHTML = data.map(u => `<tr><td>${u.email}</td><td>${u.name}</td></tr>`).join('');
+    }
+    async function loadInvites() {
+      const { data, error } = await supabase.from('invites').select('id, groom, bride, date, venue');
+      const tbody = document.querySelector('#invitesTable tbody');
+      if (error) { tbody.innerHTML = '<tr><td colspan="5">불러오기 실패</td></tr>'; return; }
+      tbody.innerHTML = data.map(i => `<tr><td>${i.id}</td><td>${i.groom}</td><td>${i.bride}</td><td>${i.date}</td><td>${i.venue}</td></tr>`).join('');
+    }
+    async function loadTemplates() {
+      const { data, error } = await supabase.from('templates').select('id, name, description');
+      const tbody = document.querySelector('#templatesTable tbody');
+      if (error) { tbody.innerHTML = '<tr><td colspan="4">불러오기 실패</td></tr>'; return; }
+      tbody.innerHTML = data.map(t => `<tr><td>${t.name}</td><td>${t.description}</td><td><button class='btn' onclick='editTemplate("${t.id}")'>수정</button></td><td><button class='btn danger' onclick='deleteTemplate("${t.id}")'>삭제</button></td></tr>`).join('');
+    }
+    async function loadPayments() {
+      const { data, error } = await supabase.from('payments').select('user_id, items, created_at');
+      const tbody = document.querySelector('#paymentsTable tbody');
+      if (error) { tbody.innerHTML = '<tr><td colspan="3">불러오기 실패</td></tr>'; return; }
+      tbody.innerHTML = data.map(p => `<tr><td>${p.user_id}</td><td>${(p.items||[]).join(', ')}</td><td>${p.created_at.slice(0,10)}</td></tr>`).join('');
+    }
+    async function loadGuestbook() {
+      const { data, error } = await supabase.from('guestbook').select('id, name, message, hidden');
+      const tbody = document.querySelector('#guestbookTable tbody');
+      if (error) { tbody.innerHTML = '<tr><td colspan="4">불러오기 실패</td></tr>'; return; }
+      tbody.innerHTML = data.map(g => `<tr><td>${g.name}</td><td>${g.hidden ? '(숨김)' : g.message}</td><td><button class='btn' onclick='hideEntry("${g.id}")'>숨김</button></td><td><button class='btn danger' onclick='deleteEntry("${g.id}")'>삭제</button></td></tr>`).join('');
+    }
+    async function addTemplate() {
+      const name = prompt('템플릿 이름?');
+      const description = prompt('설명?');
+      if (!name) return;
+      await supabase.from('templates').insert([{ name, description }]);
+      loadTemplates();
+    }
+    async function editTemplate(id) {
+      const name = prompt('새 이름?');
+      const description = prompt('새 설명?');
+      if (!name) return;
+      await supabase.from('templates').update({ name, description }).eq('id', id);
+      loadTemplates();
+    }
+    async function deleteTemplate(id) {
+      if (!confirm('정말 삭제할까요?')) return;
+      await supabase.from('templates').delete().eq('id', id);
+      loadTemplates();
+    }
+    async function hideEntry(id) {
+      await supabase.from('guestbook').update({ hidden: true }).eq('id', id);
+      loadGuestbook();
+    }
+    async function deleteEntry(id) {
+      if (!confirm('정말 삭제할까요?')) return;
+      await supabase.from('guestbook').delete().eq('id', id);
+      loadGuestbook();
+    }
+    loadUsers();
+    loadInvites();
+    loadTemplates();
+    loadPayments();
+    loadGuestbook();
+  </script>
+</body>
+</html> 

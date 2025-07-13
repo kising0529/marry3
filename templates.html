@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>청첩장 템플릿 목록</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <style>
+    .template-list { display: flex; flex-wrap: wrap; gap: 24px; }
+    .template-card { width: 200px; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 16px; text-align: center; }
+    .template-card img { width: 100%; border-radius: 4px; }
+    .template-card h3 { margin: 12px 0 8px; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <h2>청첩장 템플릿 목록</h2>
+  <div class="template-list" id="templateList"></div>
+  <script>
+    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_PUBLIC_ANON_KEY';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function loadTemplates() {
+      const { data, error } = await supabase.from('templates').select('*');
+      const list = document.getElementById('templateList');
+      if (error) {
+        list.innerHTML = '템플릿을 불러오지 못했습니다.';
+        return;
+      }
+      list.innerHTML = data.map(t => `
+        <div class="template-card">
+          <img src="${t.thumbnail_url}" alt="${t.name}" />
+          <h3>${t.name}</h3>
+          <p>${t.description || ''}</p>
+          <button onclick="selectTemplate('${t.id}')">이 템플릿 선택</button>
+          <button onclick="previewTemplate('${t.id}')">미리보기</button>
+        </div>
+      `).join('');
+    }
+
+    function selectTemplate(id) {
+      localStorage.setItem('selectedTemplateId', id);
+      alert('템플릿이 선택되었습니다!');
+      // location.href = 'invite_form.html';
+    }
+
+    function previewTemplate(id) {
+      alert('템플릿 미리보기: ' + id);
+    }
+
+    loadTemplates();
+  </script>
+</body>
+</html> 
